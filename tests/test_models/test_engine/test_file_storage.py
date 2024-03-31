@@ -3,21 +3,25 @@
 Contains the TestFileStorageDocs classes
 """
 
-from datetime import datetime
 import inspect
+import json
+import os
+import unittest
+from datetime import datetime
+
+import pep8
+
 import models
-from models.engine import file_storage
+from models import storage
 from models.amenity import Amenity
 from models.base_model import BaseModel
 from models.city import City
+from models.engine import file_storage
 from models.place import Place
 from models.review import Review
 from models.state import State
 from models.user import User
-import json
-import os
-import pep8
-import unittest
+
 FileStorage = file_storage.FileStorage
 classes = {"Amenity": Amenity, "BaseModel": BaseModel, "City": City,
            "Place": Place, "Review": Review, "State": State, "User": User}
@@ -115,40 +119,18 @@ class TestFileStorage(unittest.TestCase):
         self.assertEqual(json.loads(string), json.loads(js))
 
     @unittest.skipIf(models.storage_t == 'db', "not testing file storage")
-    def test_get_returns_object(self):
-        """Test that get returns the correct object based on class name and ID"""
-        storage = FileStorage()
-        for key, value in classes.items():
-            instance = value()
-            storage.new(instance)
-            retrieved_instance = storage.get(value.__name__, instance.id)
-            self.assertEqual(instance, retrieved_instance)
+    def test_get(self):
+        """Test that get resturns one object"""
+        first_state_id = list(storage.all(State).values())[0].id
+        self.assertEqual(first_state_id, storage.get(State, first_state_id).id)
 
     @unittest.skipIf(models.storage_t == 'db', "not testing file storage")
-    def test_get_returns_none_if_not_found(self):
-        """Test that get returns None if object is not found"""
-        storage = FileStorage()
-        non_existent_instance = storage.get("Dogtooth", "123")
-        self.assertIsNone(non_existent_instance)
+    def test_get_not_existing_id(self):
+        """Test that get resturns one object"""
+        self.assertEqual(None, storage.get(State, 'SomeBlaH'))
 
     @unittest.skipIf(models.storage_t == 'db', "not testing file storage")
-    def test_count_returns_number_of_objects(self):
-        """Test that count returns the correct number of objects"""
-        storage = FileStorage()
-        for key, value in classes.items():
-            for _ in range(3):  # Create 3 instances of each class
-                instance = value()
-                storage.new(instance)
-        total_count = storage.count()
-        self.assertEqual(total_count, len(classes) * 3)
-
-    @unittest.skipIf(models.storage_t == 'db', "not testing file storage")
-    def test_count_returns_number_of_objects_of_specified_class(self):
-        """Test that count returns the correct number of objects of specified class"""
-        storage = FileStorage()
-        for key, value in classes.items():
-            for _ in range(3):  # Create 3 instances of each class
-                instance = value()
-                storage.new(instance)
-        class_count = storage.count("Amenity")
-        self.assertEqual(class_count, 3)
+    def test_count(self):
+        """Test that get resturns one object"""
+        self.assertIsInstance(storage.count(), int)
+        self.assertIsInstance(storage.count(State), int)

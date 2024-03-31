@@ -4,6 +4,7 @@ Contains the FileStorage class
 """
 
 import json
+
 from models.amenity import Amenity
 from models.base_model import BaseModel
 from models.city import City
@@ -13,7 +14,7 @@ from models.state import State
 from models.user import User
 
 classes = {"Amenity": Amenity, "BaseModel": BaseModel, "City": City,
-        "Place": Place, "Review": Review, "State": State, "User": User}
+           "Place": Place, "Review": Review, "State": State, "User": User}
 
 
 class FileStorage:
@@ -70,30 +71,14 @@ class FileStorage:
         self.reload()
 
     def get(self, cls, id):
-        '''
-        gets an object
-        Args:
-            cls (str): class name
-            id (str): object ID
-        Returns:
-            an object based on class name and its ID
-        '''
-        obj_dict = self.all(cls)
-        for k, v in obj_dict.items():
-            matchstring = cls + '.' + id
-            if k == matchstring:
-                return v
-
+        """Return one object or `None` if not found"""
+        key = "{}.{}".format(cls.__name__, id)
+        if key in self.__objects.keys():
+            return self.__objects[key]
         return None
 
     def count(self, cls=None):
-        '''
-        counts number of objects in a class (if given)
-        Args:
-            cls (str): class name
-        Returns:
-            number of objects in class, if no class name given
-            return total number of objects in database
-        '''
-        obj_dict = self.all(cls)
-        return len(obj_dict)
+        """Return the number of objects in storage"""
+        if cls is not None:
+            return len(self.all(cls))
+        return len(self.__objects)
