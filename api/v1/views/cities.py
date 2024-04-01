@@ -1,83 +1,88 @@
 #!/usr/bin/python3
-"""
-View for Cities that handles all RESTful API actions
-"""
-
-from flask import jsonify, request, abort
-from models import storage
-from models.city import City
+"""Handles all RESTful API actions for `City`"""
 from api.v1.views import app_views
+from flask import jsonify, abort, request
+from models import storage
+from models.state import State
+from models.city import City
 
 
-@app_views.route('/states/<state_id>/cities', methods=['GET'],
-                 strict_slashes=False)
-def cities_all(state_id):
-    """ returns list of all City objects linked to a given State """
-    state = storage.get("State", state_id)
-    if state is None:
+@app_views.route("/states/<state_id>/cities")
+def cities_in_a_state(state_id):
+    """Retrieve the list of all `City` objects of a state
+
+    Args:
+        state_id (str): State identifier
+    """
+    state = storage.get(State, state_id)
+    if not state:
         abort(404)
-    cities_all = []
-    cities = storage.all("City").values()
-    for city in cities:
-        if city.state_id == state_id:
-            cities_all.append(city.to_json())
-    return jsonify(cities_all)
+
+    result = []
+    for city in state.cities:
+        result.append(city.to_dict())
+
+    return jsonify(result)
 
 
-@app_views.route('/cities/<city_id>', methods=['GET'])
-def city_get(city_id):
-    """ handles GET method """
-    city = storage.get("City", city_id)
-    if city is None:
+@app_views.route("/cities/<city_id>")
+def city(city_id):
+    """Retrieve a `City`"""
+    city = storage.get(City, city_id)
+    if not city:
         abort(404)
-    city = city.to_json()
-    return jsonify(city)
+
+    return jsonify(city.to_dict())
 
 
-@app_views.route('/cities/<city_id>', methods=['DELETE'])
-def city_delete(city_id):
-    """ handles DELETE method """
-    empty_dict = {}
-    city = storage.get("City", city_id)
-    if city is None:
+@app_views.route("/cities/<city_id>", methods=["DELETE"])
+def delete_city(city_id):
+    """Remove a city
+
+    Args:
+        city_id (str): City identifier
+    """
+    city = storage.get(City, city_id)
+    if not city:
         abort(404)
-    storage.delete(city)
+
+    city.delete()
     storage.save()
-    return jsonify(empty_dict), 200
+
+    return jsonify({}), 200
 
 
-@app_views.route('/states/<state_id>/cities', methods=['POST'],
-                 strict_slashes=False)
-def city_post(state_id):
-    """ handles POST method """
-    state = storage.get("State", state_id)
-    if state is None:
+@app_views.route("/states/<state_id>/cities", methods=["POST"])
+def create_city(state_id):
+    """Create a city
+
+    Args:
+        state_id (str): State identifier
+    """
+    state = storage.get(State, state_id)
+    if not state:
         abort(404)
-    data = request.get_json()
-    if data is None:
+    if not request.get_json():
         abort(400, "Not a JSON")
-    if 'name' not in data:
+    if "name" not in request.get_json():
         abort(400, "Missing name")
-    city = City(**data)
-    city.state_id = state_id
+
+    city = City(state_id=state_id, **request.get_json())
     city.save()
-    city = city.to_json()
-    return jsonify(city), 201
+
+    return jsonify(city.to_dict()), 201
 
 
-@app_views.route('/cities/<city_id>', methods=['PUT'])
-def city_put(city_id):
-    """ handles PUT method """
-    city = storage.get("City", city_id)
-    if city is None:
+@app_views.route("/cities/<city_id>", methods=["PUT"])
+def update_city(city_id):
+    city = storage.get(City, city_id)
+    if not city:
         abort(404)
-    data = request.get_json()
-    if data is None:
+    if not request.get_json():
         abort(400, "Not a JSON")
-    for key, value in data.items():
-        ignore_keys = ["id", "created_at", "updated_at"]
-        if key not in ignore_keys:
-            city.bm_update(key, value)
+
+    key = "name"
+    setattr(city, key, request.get_json().get(key))
     city.save()
-    city = city.to_json()
-    return jsonify(city), 200
+
+    return jsonify(city.to_dict())
